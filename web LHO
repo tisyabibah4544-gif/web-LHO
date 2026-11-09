@@ -1,0 +1,890 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>LHO Quest</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap" rel="stylesheet">
+<style>
+/* Konsep tata letak: buku catatan lapangan. Bilah progres di atas, satu misi per layar, kartu putih di atas latar abu terang.
+   Palet mengikuti ketentuan: 60% #FFF8E1, 30% #1F4D38, 10% #F4C430. Tampilan tunggal (terang) dipilih sengaja. */
+:root{
+  --bg:#F5EFDB; --card:#FFFFFF; --fg:#1B2E24; --ink:#1F4D38; --ink-soft:#56685C;
+  --gold:#F4C430; --on-gold:#2A2200; --line:#D8D2B8; --tint:#E4EDDD; --gold-tint:rgba(244,196,48,.3);
+  --bad:#B4432F; --bad-tint:#F8DDD6; --hero-bg:#1F4D38; --hero-ink:#FFF6DA;
+  --m-topik:#BFE0E6; --m-utama:#FBE48A; --m-gagasan:#F7CFAE; --m-penjelas:#CFE3C4;
+  --display:'Bricolage Grotesque','Trebuchet MS',system-ui,sans-serif;
+  --body:'Atkinson Hyperlegible','Segoe UI',system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#12201A; --card:#1B2E25; --fg:#EDF2E4; --ink:#86C29B; --ink-soft:#A9BAAC;
+    --line:#35493D; --tint:#233A2D; --gold-tint:rgba(244,196,48,.22);
+    --bad:#F2937F; --bad-tint:#4A2A24; --hero-bg:#0E2A1D;
+    --m-topik:#2D5560; --m-utama:#6B5A12; --m-gagasan:#6B4728; --m-penjelas:#34553E;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12201A; --card:#1B2E25; --fg:#EDF2E4; --ink:#86C29B; --ink-soft:#A9BAAC;
+  --line:#35493D; --tint:#233A2D; --gold-tint:rgba(244,196,48,.22);
+  --bad:#F2937F; --bad-tint:#4A2A24; --hero-bg:#0E2A1D;
+  --m-topik:#2D5560; --m-utama:#6B5A12; --m-gagasan:#6B4728; --m-penjelas:#34553E;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:17px;line-height:1.6;
+  padding-block:0 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+.wrap{max-width:980px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);line-height:1.1;margin:0;text-wrap:balance}
+h2{font-size:clamp(1.7rem,4.2vw,2.5rem);font-weight:800;letter-spacing:-.01em}
+h3{font-size:1.2rem;font-weight:700}
+p{margin:0 0 .8em}
+ul,ol{margin:0;padding-left:1.2em}
+li+li{margin-top:.35em}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+h2:focus{outline:none}
+
+/* top bar */
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line);margin-inline:-16px;padding:10px 16px}
+.topbar .wrap{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px;background:none;border:0;cursor:pointer;padding:4px 0;font-family:var(--display);font-weight:800;font-size:1.05rem;letter-spacing:.06em}
+.brand i{display:inline-block;width:12px;height:12px;background:var(--gold);border-radius:50%}
+.steps{display:flex;gap:6px;flex-wrap:wrap;list-style:none;padding:0;margin:0}
+.steps li{margin:0}
+.step{display:flex;align-items:center;gap:7px;padding:4px 10px 4px 5px;border-radius:999px;border:1.5px solid var(--line);background:transparent;cursor:pointer;font-size:.88rem;font-weight:700}
+.step b{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--tint);font-size:.8rem}
+.step.cur{border-color:var(--ink);background:var(--card)}
+.step.done b{background:var(--gold);color:var(--on-gold)}
+.step.done b::before{content:"✓"}
+.step.done b span{display:none}
+.step-label{white-space:nowrap}
+@media (max-width:640px){.step{padding:3px}.step-label{display:none}}
+
+/* generic */
+.page{padding-block:32px 8px}
+.eyebrow{font-size:.8rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.eyebrow .n{display:grid;place-items:center;min-width:30px;height:30px;border-radius:50%;background:var(--gold);color:var(--on-gold);letter-spacing:0}
+.lead{font-size:1.1rem;color:var(--ink-soft);max-width:62ch}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px}
+.card h3{margin-bottom:10px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:760px){.grid2,.grid3{grid-template-columns:minmax(0,1fr)}}
+.stack{display:grid;gap:16px;margin-top:24px}
+.mark{background:var(--gold);color:var(--on-gold);padding:0 .32em;border-radius:3px;font-weight:700;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.mark.t{background:var(--m-topik);color:var(--fg)}
+.mark.gu{background:var(--m-gagasan);color:var(--fg)}
+.mark.gp{background:var(--m-penjelas);color:var(--fg)}
+.mark.ku{background:var(--m-utama);color:var(--fg)}
+.tag{display:inline-block;font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:8px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:8px;border:2px solid var(--ink);background:var(--ink);color:var(--bg);font-weight:700;cursor:pointer;text-decoration:none}
+.btn:hover{filter:brightness(1.12)}
+.btn.accent{background:var(--gold);border-color:var(--gold);color:var(--on-gold)}
+.btn.alt{background:transparent;color:var(--ink)}
+.btn.alt:hover{background:var(--tint)}
+.btn.sm{padding:7px 14px;font-size:.9rem}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+.nav{display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between;margin-top:32px;padding-top:20px;border-top:1px solid var(--line)}
+.nav .right{margin-left:auto;display:flex;gap:12px;flex-wrap:wrap}
+.say{float:right;margin:0 0 6px 12px}
+.say[hidden]{display:none}
+.rule{border:0;border-top:1px solid var(--line);margin:0}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:32px;align-items:center;background:var(--hero-bg);color:var(--hero-ink);border-radius:24px;padding:clamp(20px,4vw,40px)}
+.hero>*{min-width:0}
+@media (max-width:820px){.hero{grid-template-columns:minmax(0,1fr)}}
+.hero h1{font-size:clamp(3.2rem,11vw,6rem);font-weight:800;letter-spacing:-.02em;line-height:.95}
+.hero h1 em{font-style:normal;color:var(--gold)}
+.hero .sub{font-family:var(--display);font-size:clamp(1.15rem,2.6vw,1.5rem);font-weight:500;margin:16px 0}
+.slogan{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 24px;list-style:none;padding:0}
+.slogan li{margin:0;padding:5px 12px;border:1.5px solid var(--hero-ink);border-radius:999px;font-weight:700;font-size:.95rem}
+.ill{width:100%;height:auto;display:block;border-radius:12px}
+.map{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-top:40px;list-style:none;padding:0}
+.map li{margin:0;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px;font-size:.88rem;line-height:1.35}
+.map b{display:block;font-family:var(--display);font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;color:var(--ink-soft)}
+@media (max-width:820px){.map{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* instructions */
+.howto{list-style:none;padding:0;display:grid;gap:12px;margin-top:24px;counter-reset:h}
+.howto li{margin:0;display:flex;gap:14px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;counter-increment:h}
+.howto li::before{content:counter(h);flex:none;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--gold);color:var(--on-gold);font-weight:700;font-family:var(--display)}
+
+/* goals */
+.goals{list-style:none;padding:0;display:grid;gap:12px;margin-top:24px}
+.goals li{margin:0;display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+.goals .k{font-family:var(--display);font-weight:800;font-size:1.6rem;color:var(--ink);line-height:1}
+.goals .k span{background:var(--gold);color:var(--on-gold);padding:0 .2em;border-radius:3px}
+
+/* material visuals */
+.exfeat{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.exbox{padding:10px 14px;border-radius:8px;border:1.5px dashed var(--ink);background:var(--card)}
+.arrow{font-family:var(--display);font-size:1.5rem;font-weight:800}
+.cmp{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px;overflow:hidden}
+.cmp th,.cmp td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+.cmp thead th{background:var(--ink);color:var(--bg);font-family:var(--display);letter-spacing:.04em}
+.cmp tbody th{width:30%;font-family:var(--display)}
+.cmp tr:last-child th,.cmp tr:last-child td{border-bottom:0}
+.tablebox{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+.tree .root{display:inline-block;background:var(--ink);color:var(--bg);padding:12px 16px;border-radius:8px;font-weight:700;max-width:100%}
+.tree .root small{display:block;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;opacity:.8;margin-bottom:2px}
+.branches{margin:0 0 0 22px;padding:14px 0 0 22px;border-left:3px solid var(--ink);display:grid;gap:10px;list-style:none}
+.branches li{margin:0;position:relative;background:var(--card);border:1.5px solid var(--ink);border-radius:8px;padding:10px 14px}
+.branches li::before{content:"";position:absolute;left:-25px;top:50%;width:22px;border-top:3px solid var(--ink)}
+.branches li small{display:block;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft)}
+.pos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.pos{grid-template-columns:minmax(0,1fr)}}
+.pos .card{padding:14px}
+.pos .s{display:block;padding:4px 8px;border-radius:5px;background:var(--tint);margin-bottom:5px;font-size:.88rem}
+.pos .s.m{background:var(--m-utama);font-weight:700}
+
+/* activities */
+.act{margin-top:28px;background:var(--card);border:2px solid var(--ink);border-radius:12px;padding:22px}
+.act-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.act-head h3{display:flex;align-items:center;gap:10px}
+.badge{display:inline-flex;align-items:center;gap:6px;background:var(--gold);color:var(--on-gold);font-weight:700;border-radius:999px;padding:3px 12px;font-size:.88rem;font-variant-numeric:tabular-nums}
+.passage{background:var(--tint);border-radius:8px;padding:14px 16px;margin-bottom:14px}
+.passage .ttl{font-family:var(--display);font-weight:700;margin-bottom:4px}
+.q{font-weight:700;margin:0 0 12px}
+.opts{display:grid;gap:10px}
+.opt{display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%;padding:12px 14px;border:1.5px solid var(--line);background:var(--card);border-radius:8px;cursor:pointer}
+.opt:hover{border-color:var(--ink)}
+.opt .let{flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--tint);font-weight:700;font-size:.9rem}
+.opts.locked .opt{pointer-events:none}
+.opt.ok{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.opt.ok .let{background:var(--gold);color:var(--on-gold)}
+.opt.no{border-color:var(--bad);background:var(--bad-tint)}
+.opt.no .let{background:var(--bad);color:var(--bg)}
+.fb{display:flex;gap:12px;align-items:flex-start;margin-top:14px;padding:14px;border-radius:8px}
+.fb .ic{flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;font-weight:700;color:var(--bg)}
+.fb.ok{background:var(--tint)} .fb.ok .ic{background:var(--ink)}
+.fb.no{background:var(--bad-tint)} .fb.no .ic{background:var(--bad)}
+.fb p{margin:0}.fb p+p{margin-top:.4em}
+.after{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.sentopt .num{flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:6px;background:var(--tint);font-weight:700;font-size:.9rem}
+.opt.sent{align-items:flex-start}
+.opt.ok .num{background:var(--gold);color:var(--on-gold)}
+.opt.no .num{background:var(--bad);color:var(--bg)}
+.summary{text-align:center;padding:10px 0}
+.summary .big{font-family:var(--display);font-size:2.4rem;font-weight:800}
+
+/* pair game */
+.pairs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:760px){.pairs{grid-template-columns:minmax(0,1fr)}}
+.pbox{border:2px solid var(--ink);border-radius:10px;overflow:hidden;background:var(--card)}
+.pbtn{width:100%;text-align:left;background:var(--ink);color:var(--bg);border:0;padding:12px 14px;cursor:pointer;font-weight:700}
+.pbtn small{display:block;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;opacity:.8}
+.pbtn:hover{filter:brightness(1.12)}
+.pbox ul{list-style:none;padding:10px;margin:0;display:grid;gap:8px;min-height:64px}
+.pbox li{margin:0;padding:8px 12px;background:var(--gold-tint);border-radius:6px;font-size:.95rem}
+.pbox li::before{content:"✓ ";font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.chip{padding:9px 14px;border-radius:8px;border:1.5px solid var(--ink);background:var(--card);cursor:pointer;text-align:left}
+.chip[aria-pressed="true"]{background:var(--gold);color:var(--on-gold)}
+.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+@media (prefers-reduced-motion:reduce){.shake{animation:none}}
+
+/* explorer (misi 5) */
+.seg{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.seg button{padding:8px 14px;border-radius:999px;border:1.5px solid var(--ink);background:var(--card);cursor:pointer;font-weight:700}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.seg button.seen::after{content:" ✓";color:var(--gold)}
+.seg button[aria-pressed="true"].seen::after{color:var(--gold)}
+.sample .ttl{font-family:var(--display);font-weight:700;font-size:1.2rem;display:inline-block;padding:0 .2em;border-radius:4px;margin-bottom:6px}
+.sample .snt{padding:2px 4px;border-radius:4px;transition:background .2s}
+.sample .hl-topik{background:var(--m-topik);font-weight:700}
+.sample .hl-utama{background:var(--m-utama);font-weight:700}
+.sample .hl-gagasan{background:var(--m-gagasan);font-weight:700}
+.sample .hl-penjelas{background:var(--m-penjelas)}
+.expl{margin-top:14px;min-height:3.2em}
+
+.video{background:var(--gold-tint);border-color:var(--ink)}
+.video .btn{margin-top:4px}
+.video.locked{background:var(--tint);border-style:dashed}
+/* quiz */
+.prog{height:8px;background:var(--tint);border-radius:99px;overflow:hidden;margin-bottom:14px}
+.prog i{display:block;height:100%;background:var(--ink);transition:width .3s}
+.qmeta{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px;font-weight:700}
+.bignum{font-family:var(--display);font-weight:800;font-size:clamp(4rem,14vw,7rem);line-height:1;font-variant-numeric:tabular-nums}
+.bignum small{font-size:.3em;color:var(--ink-soft);font-weight:500}
+.res{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:20px;align-items:start}
+@media (max-width:760px){.res{grid-template-columns:minmax(0,1fr)}}
+.stat{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+.stat div{flex:1;min-width:110px;background:var(--tint);border-radius:8px;padding:10px 14px}
+.stat b{display:block;font-family:var(--display);font-size:1.6rem}
+.dots{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.dots span{display:grid;place-items:center;width:32px;height:32px;border-radius:6px;font-weight:700;font-size:.85rem}
+.dots .y{background:var(--ink);color:var(--bg)}
+.dots .n{background:var(--bad-tint);color:var(--bad);border:1.5px solid var(--bad)}
+.skill{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--line)}
+.skill:last-child{border-bottom:0}
+</style>
+
+</head>
+<body>
+<header class="topbar" id="topbar">
+  <div class="wrap">
+    <button class="brand" data-go="beranda" aria-label="Kembali ke Beranda"><i></i>LHO QUEST</button>
+    <ol class="steps" id="steps" aria-label="Progres misi"></ol>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- HALAMAN 1: BERANDA -->
+<section class="page" id="p-beranda">
+  <div class="hero">
+    <div>
+      <div class="eyebrow">Bahasa Indonesia · Kelas VIII SMP</div>
+      <h1>LHO <em>QUEST</em></h1>
+      <p class="sub">Petualangan Memahami Teks Laporan Hasil Observasi</p>
+      <ul class="slogan" aria-label="Slogan"><li>Amati,</li><li>Pahami,</li><li>Laporkan!</li></ul>
+      <button class="btn accent" data-go="petunjuk">Mulai Petualangan →</button>
+    </div>
+    <svg class="ill" viewBox="0 0 480 360" role="img" aria-label="Ilustrasi siswa mengamati tanaman dengan kaca pembesar sambil membawa buku catatan">
+      <rect width="480" height="360" rx="14" fill="#E4EDDD"/>
+      <circle cx="396" cy="72" r="30" fill="#F4C430"/>
+      <path d="M0 270 Q110 205 230 255 T480 240 V360 H0Z" fill="#1F4D38" fill-opacity=".16"/>
+      <rect x="40" y="178" width="12" height="92" fill="#1F4D38"/>
+      <circle cx="46" cy="160" r="44" fill="#1F4D38" fill-opacity=".85"/>
+      <circle cx="26" cy="176" r="24" fill="#1F4D38" fill-opacity=".85"/>
+      <rect x="0" y="292" width="480" height="68" fill="#1F4D38"/>
+      <g stroke="#FFF8E1" stroke-width="3" fill="none" stroke-linecap="round"><path d="M360 292 V240"/><path d="M360 262 Q335 258 330 238"/><path d="M360 252 Q388 246 392 226"/></g>
+      <g fill="#FFF8E1"><ellipse cx="330" cy="232" rx="9" ry="14" transform="rotate(-25 330 232)"/><ellipse cx="393" cy="220" rx="9" ry="14" transform="rotate(25 393 220)"/><ellipse cx="360" cy="232" rx="9" ry="14"/></g>
+      <!-- siswa -->
+      <circle cx="196" cy="140" r="24" fill="#FFF8E1" stroke="#1F4D38" stroke-width="5"/>
+      <path d="M172 136 Q176 110 198 112 Q220 112 220 136 Q205 122 172 136Z" fill="#1F4D38"/>
+      <rect x="170" y="170" width="52" height="84" rx="14" fill="#1F4D38"/>
+      <rect x="176" y="250" width="16" height="42" rx="6" fill="#1F4D38"/>
+      <rect x="200" y="250" width="16" height="42" rx="6" fill="#1F4D38"/>
+      <path d="M216 190 L256 226" stroke="#1F4D38" stroke-width="12" stroke-linecap="round"/>
+      <circle cx="288" cy="204" r="30" fill="#FFF8E1" fill-opacity=".9" stroke="#F4C430" stroke-width="7"/>
+      <path d="M278 214 Q288 190 300 196 Q298 212 278 214Z" fill="#1F4D38"/>
+      <path d="M266 226 L250 242" stroke="#F4C430" stroke-width="9" stroke-linecap="round"/>
+      <path d="M172 192 L152 218" stroke="#1F4D38" stroke-width="12" stroke-linecap="round"/>
+      <rect x="120" y="206" width="40" height="52" rx="4" fill="#FFF8E1" stroke="#1F4D38" stroke-width="4" transform="rotate(-8 140 232)"/>
+      <g stroke="#1F4D38" stroke-width="3" stroke-linecap="round" transform="rotate(-8 140 232)"><path d="M128 220H150"/><path d="M128 230H150"/><path d="M128 240H142"/></g>
+    </svg>
+  </div>
+  <h2 style="font-size:1.1rem;margin-top:44px;letter-spacing:.1em;text-transform:uppercase">Peta petualangan</h2>
+  <ol class="map" aria-label="Daftar misi">
+    <li><b>Misi 1</b>Mengenal topik</li>
+    <li><b>Misi 2</b>Menemukan gagasan utama</li>
+    <li><b>Misi 3</b>Mengidentifikasi gagasan penjelas</li>
+    <li><b>Misi 4</b>Menemukan kalimat utama</li>
+    <li><b>Misi 5</b>Membedakan keempat unsur</li>
+    <li><b>Evaluasi</b>10 soal uji pemahaman</li>
+  </ol>
+</section>
+
+<!-- HALAMAN 2: PETUNJUK -->
+<section class="page" id="p-petunjuk" hidden>
+  <div class="eyebrow">Sebelum mulai</div>
+  <h2 tabindex="-1">Petunjuk Penggunaan</h2>
+  <p class="lead" style="margin-top:12px">Baca enam langkah singkat ini agar petualanganmu berjalan lancar.</p>
+  <ol class="howto">
+    <li>Klik tombol untuk berpindah halaman.</li>
+    <li>Pelajari materi yang tersedia.</li>
+    <li>Ikuti setiap misi pembelajaran.</li>
+    <li>Jawab pertanyaan dan kuis dengan teliti.</li>
+    <li>Perhatikan umpan balik yang diberikan.</li>
+    <li>Selesaikan seluruh misi untuk memperoleh hasil akhir.</li>
+  </ol>
+  <div class="nav"><button class="btn alt" data-go="beranda">← Beranda</button><div class="right"><button class="btn" data-go="tujuan">Mulai Misi →</button></div></div>
+</section>
+
+<!-- HALAMAN 3: TUJUAN -->
+<section class="page" id="p-tujuan" hidden>
+  <div class="eyebrow">Target belajarmu</div>
+  <h2 tabindex="-1">Tujuan Pembelajaran</h2>
+  <p class="lead" style="margin-top:12px">Setelah menggunakan media ini, kamu diharapkan mampu:</p>
+  <ol class="goals">
+    <li><div class="k"><span>1</span></div><div>Menjelaskan pengertian topik, gagasan utama, gagasan penjelas, dan kalimat utama dalam teks LHO.</div></li>
+    <li><div class="k"><span>2</span></div><div>Mengidentifikasi topik dan gagasan utama dalam paragraf teks LHO.</div></li>
+    <li><div class="k"><span>3</span></div><div>Menentukan gagasan penjelas yang mendukung gagasan utama.</div></li>
+    <li><div class="k"><span>4</span></div><div>Menemukan kalimat utama dalam paragraf teks LHO secara tepat.</div></li>
+  </ol>
+  <div class="nav"><button class="btn alt" data-go="petunjuk">← Kembali</button><div class="right"><button class="btn" data-go="misi-1">Lanjut ke Misi 1 →</button></div></div>
+</section>
+
+<!-- MISI 1 -->
+<section class="page" id="p-misi-1" hidden>
+  <div class="eyebrow"><span class="n">1</span>Misi 1 dari 5</div>
+  <h2 tabindex="-1">Mengenal Topik</h2>
+  <div class="stack">
+    <div class="card" data-say="Pengertian topik. Topik adalah pokok pembicaraan atau hal umum yang menjadi dasar pembahasan dalam sebuah teks. Topik mencakup keseluruhan isi teks dan bersifat umum.">
+      <button class="btn alt sm say" type="button">🔊 Dengarkan</button>
+      <span class="tag">Pengertian</span>
+      <p style="font-size:1.1rem;margin:0"><span class="mark t">Topik</span> adalah pokok pembicaraan atau hal umum yang menjadi dasar pembahasan dalam sebuah teks. Topik mencakup keseluruhan isi teks dan bersifat umum.</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <span class="tag">Cara menentukan topik</span>
+        <ul>
+          <li>Ajukan pertanyaan, “Apa yang paling banyak dibahas dalam teks?”</li>
+          <li>Perhatikan judul teks.</li>
+          <li>Amati kata-kata yang sering muncul.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="tag">Contoh</span>
+        <div class="exfeat">
+          <div class="exbox"><small>Judul teks</small><br><b>“Sepeda Motor di Indonesia”</b></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div class="exbox" style="border-style:solid;background:var(--gold-tint)"><small><span class="mark t">Topik</span></small><br><b>Sepeda motor di Indonesia</b></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="act" id="act-1">
+    <div class="act-head"><h3>Tantangan Misi 1</h3></div>
+    <div id="act-1-body"></div>
+  </div>
+  <div class="nav"><button class="btn alt" data-go="tujuan">← Kembali</button><div class="right"><button class="btn" data-go="misi-2">Lanjut ke Misi 2 →</button></div></div>
+</section>
+
+<!-- MISI 2 -->
+<section class="page" id="p-misi-2" hidden>
+  <div class="eyebrow"><span class="n">2</span>Misi 2 dari 5</div>
+  <h2 tabindex="-1">Menemukan Gagasan Utama</h2>
+  <div class="stack">
+    <div class="card" data-say="Pengertian gagasan utama. Gagasan utama adalah ide pokok atau inti pembahasan dalam suatu paragraf. Gagasan utama bersifat khusus dan menjadi dasar pengembangan paragraf.">
+      <button class="btn alt sm say" type="button">🔊 Dengarkan</button>
+      <span class="tag">Pengertian</span>
+      <p style="font-size:1.1rem;margin:0"><span class="mark gu">Gagasan utama</span> adalah ide pokok atau inti pembahasan dalam suatu paragraf. Gagasan utama bersifat khusus dan menjadi dasar pengembangan paragraf.</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <span class="tag">Cara menentukan gagasan utama</span>
+        <ul>
+          <li>Pahami isi paragraf secara keseluruhan.</li>
+          <li>Temukan hal yang paling penting dibahas.</li>
+          <li>Perhatikan kalimat utama dalam paragraf.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="tag">Contoh</span>
+        <p>Paragraf membahas manfaat sepeda motor sebagai alat transportasi pribadi.</p>
+        <p style="margin:0"><b>Gagasan utama:</b> <span class="mark gu">Sepeda motor bermanfaat sebagai alat transportasi pribadi.</span></p>
+      </div>
+    </div>
+    <div>
+      <span class="tag">Topik dan gagasan utama itu berbeda</span>
+      <div class="tablebox"><table class="cmp">
+        <thead><tr><th></th><th>Topik</th><th>Gagasan utama</th></tr></thead>
+        <tbody>
+          <tr><th>Cakupan</th><td>Seluruh teks</td><td>Satu paragraf</td></tr>
+          <tr><th>Sifat</th><td>Umum</td><td>Khusus</td></tr>
+          <tr><th>Bentuk</th><td>Frasa pendek</td><td>Pernyataan lengkap</td></tr>
+          <tr><th>Contoh</th><td>Sepeda motor di Indonesia</td><td>Sepeda motor bermanfaat sebagai alat transportasi pribadi.</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+  <div class="act">
+    <div class="act-head"><h3>Permainan: Temukan Intinya</h3><span class="badge" id="score-2">Benar 0 dari 3</span></div>
+    <div id="act-2-body"></div>
+  </div>
+  <div class="nav"><button class="btn alt" data-go="misi-1">← Kembali</button><div class="right"><button class="btn" data-go="misi-3">Lanjut ke Misi 3 →</button></div></div>
+</section>
+
+<!-- MISI 3 -->
+<section class="page" id="p-misi-3" hidden>
+  <div class="eyebrow"><span class="n">3</span>Misi 3 dari 5</div>
+  <h2 tabindex="-1">Mengidentifikasi Gagasan Penjelas</h2>
+  <div class="stack">
+    <div class="card" data-say="Pengertian gagasan penjelas. Gagasan penjelas adalah ide atau informasi yang mendukung dan menguraikan gagasan utama agar pembahasan menjadi lebih jelas dan terperinci.">
+      <button class="btn alt sm say" type="button">🔊 Dengarkan</button>
+      <span class="tag">Pengertian</span>
+      <p style="font-size:1.1rem;margin:0"><span class="mark gp">Gagasan penjelas</span> adalah ide atau informasi yang mendukung dan menguraikan gagasan utama agar pembahasan menjadi lebih jelas dan terperinci.</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <span class="tag">Ciri-ciri gagasan penjelas</span>
+        <ul>
+          <li>Mendukung gagasan utama.</li>
+          <li>Berisi rincian, fakta, contoh, atau keterangan.</li>
+          <li>Membuat informasi lebih lengkap.</li>
+        </ul>
+      </div>
+      <div class="card tree">
+        <span class="tag">Contoh</span>
+        <div class="root"><small>Gagasan utama</small>Sepeda motor bermanfaat sebagai alat transportasi pribadi.</div>
+        <ul class="branches">
+          <li><small>Gagasan penjelas</small>Digunakan untuk pergi bekerja.</li>
+          <li><small>Gagasan penjelas</small>Termasuk alat transportasi yang hemat.</li>
+          <li><small>Gagasan penjelas</small>Memudahkan pengendara mengakses gang sempit dan jalan macet.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="act">
+    <div class="act-head"><h3>Permainan: Pasangkan Gagasan</h3><span class="badge" id="score-3">Terpasang 0 dari 6</span></div>
+    <p>Pilih satu gagasan penjelas, lalu klik gagasan utama yang didukungnya.</p>
+    <div id="act-3-body"></div>
+  </div>
+  <div class="nav"><button class="btn alt" data-go="misi-2">← Kembali</button><div class="right"><button class="btn" data-go="misi-4">Lanjut ke Misi 4 →</button></div></div>
+</section>
+
+<!-- MISI 4 -->
+<section class="page" id="p-misi-4" hidden>
+  <div class="eyebrow"><span class="n">4</span>Misi 4 dari 5</div>
+  <h2 tabindex="-1">Menemukan Kalimat Utama</h2>
+  <div class="stack">
+    <div class="card" data-say="Pengertian kalimat utama. Kalimat utama adalah kalimat yang memuat gagasan utama dalam sebuah paragraf. Kalimat utama dapat terletak di awal, akhir, atau awal dan akhir paragraf.">
+      <button class="btn alt sm say" type="button">🔊 Dengarkan</button>
+      <span class="tag">Pengertian</span>
+      <p style="font-size:1.1rem;margin:0"><span class="mark ku">Kalimat utama</span> adalah kalimat yang memuat gagasan utama dalam sebuah paragraf. Kalimat utama dapat terletak di awal, akhir, atau awal dan akhir paragraf.</p>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <span class="tag">Ciri-ciri kalimat utama</span>
+        <ul>
+          <li>Mengandung inti pembahasan paragraf.</li>
+          <li>Bersifat lebih umum daripada kalimat penjelas.</li>
+          <li>Dapat dikembangkan dengan kalimat-kalimat penjelas.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="tag">Contoh</span>
+        <p><b>Kalimat utama:</b><br><span class="mark ku">“Sepeda motor bermanfaat sebagai alat transportasi pribadi.”</span></p>
+        <p><b>Gagasan utama:</b><br>Manfaat sepeda motor sebagai alat transportasi pribadi.</p>
+        <p style="margin:0"><b>Gagasan penjelas:</b></p>
+        <ul>
+          <li>Digunakan untuk pergi bekerja.</li>
+          <li>Termasuk alat transportasi yang hemat.</li>
+          <li>Memudahkan pengendara mengakses gang sempit dan jalan macet.</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <span class="tag">Letak kalimat utama (bagian yang disorot)</span>
+      <div class="pos">
+        <div class="card"><b>Di awal paragraf</b><br><br><span class="s m">Kalimat utama</span><span class="s">Kalimat penjelas</span><span class="s">Kalimat penjelas</span></div>
+        <div class="card"><b>Di akhir paragraf</b><br><br><span class="s">Kalimat penjelas</span><span class="s">Kalimat penjelas</span><span class="s m">Kalimat utama</span></div>
+        <div class="card"><b>Di awal dan akhir</b><br><br><span class="s m">Kalimat utama</span><span class="s">Kalimat penjelas</span><span class="s m">Kalimat utama (pengulang)</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="act">
+    <div class="act-head"><h3>Detektif Kalimat Utama</h3><span class="badge" id="score-4">Benar 0 dari 2</span></div>
+    <div id="act-4-body"></div>
+  </div>
+  <div class="nav"><button class="btn alt" data-go="misi-3">← Kembali</button><div class="right"><button class="btn" data-go="misi-5">Lanjut ke Misi 5 →</button></div></div>
+</section>
+
+<!-- MISI 5 -->
+<section class="page" id="p-misi-5" hidden>
+  <div class="eyebrow"><span class="n">5</span>Misi 5 dari 5</div>
+  <h2 tabindex="-1">Membedakan Keempat Unsur</h2>
+  <div class="stack">
+    <div class="tablebox"><table class="cmp">
+      <thead><tr><th>Unsur</th><th>Pengertian</th></tr></thead>
+      <tbody>
+        <tr><th><span class="mark t">Topik</span></th><td>Pokok pembicaraan seluruh teks.</td></tr>
+        <tr><th><span class="mark gu">Gagasan utama</span></th><td>Inti pembahasan suatu paragraf.</td></tr>
+        <tr><th><span class="mark gp">Gagasan penjelas</span></th><td>Informasi yang mendukung gagasan utama.</td></tr>
+        <tr><th><span class="mark ku">Kalimat utama</span></th><td>Kalimat yang memuat gagasan utama.</td></tr>
+      </tbody>
+    </table></div>
+    <div class="card" data-say="Kesimpulan materi. Topik menjadi dasar pembahasan teks, gagasan utama merupakan inti pembahasan paragraf, gagasan penjelas menguraikan inti tersebut, sedangkan kalimat utama adalah kalimat yang mengandung gagasan utama.">
+      <button class="btn alt sm say" type="button">🔊 Dengarkan</button>
+      <span class="tag">Kesimpulan materi</span>
+      <p style="margin:0">Topik menjadi dasar pembahasan teks, gagasan utama merupakan inti pembahasan paragraf, gagasan penjelas menguraikan inti tersebut, sedangkan kalimat utama adalah kalimat yang mengandung gagasan utama.</p>
+    </div>
+  </div>
+  <div class="act">
+    <div class="act-head"><h3>Lihat keempat unsur dalam satu teks</h3><span class="badge" id="score-5">Dilihat 0 dari 4</span></div>
+    <p>Klik setiap unsur untuk melihat bagian teks yang sesuai. Setiap unsur punya warna sendiri:</p>
+    <p style="display:flex;gap:8px;flex-wrap:wrap"><span class="mark t">Topik</span><span class="mark gu">Gagasan utama</span><span class="mark gp">Gagasan penjelas</span><span class="mark ku">Kalimat utama</span></p>
+    <div class="seg" id="seg5"></div>
+    <div class="passage sample" id="sample5"></div>
+    <div class="fb ok expl" id="expl5" role="status"><span class="ic">i</span><div>Pilih salah satu unsur di atas.</div></div>
+  </div>
+  <div class="act video locked" id="video5">
+    <div class="act-head"><h3>Penjelasan Ulang: Video Pembelajaran</h3><span class="badge" id="vstat">Terkunci</span></div>
+    <p id="vtext">Selesaikan Misi 1 sampai 5 untuk membuka video penjelasan ulang.</p>
+    <a class="btn" id="vlink" href="https://drive.google.com/drive/folders/19_kx1bZr61Bn2H0F0v9_MSXXuI8u8KzH" target="_blank" rel="noopener" hidden>▶ Buka Video Pembelajaran</a>
+  </div>
+  <div class="nav"><button class="btn alt" data-go="misi-4">← Kembali</button><div class="right"><button class="btn" data-go="evaluasi">Lanjut ke Evaluasi →</button></div></div>
+</section>
+
+<!-- EVALUASI -->
+<section class="page" id="p-evaluasi" hidden>
+  <div class="eyebrow">Tantangan akhir</div>
+  <h2 tabindex="-1">Evaluasi: Uji Pemahaman</h2>
+  <div id="quizIntro" class="stack">
+    <div class="card">
+      <p class="lead" style="margin-bottom:14px">Ada 10 soal pilihan ganda dengan teks observasi pendek. Setiap jawaban langsung diberi umpan balik.</p>
+      <ul>
+        <li>Jawaban benar memperoleh 10 poin.</li>
+        <li>Jawaban salah memperoleh 0 poin.</li>
+        <li>Skor maksimal adalah 100.</li>
+      </ul>
+      <p style="margin:16px 0 0"><span class="badge" id="missionCount">Misi selesai 0 dari 5</span></p>
+      <div class="fb ok" id="quizLock" style="margin-top:14px"></div>
+    </div>
+    <div><button class="btn" id="startQuiz">Mulai Kuis →</button></div>
+  </div>
+  <div id="quizBody" hidden></div>
+  <div class="nav" id="evalNav"><button class="btn alt" data-go="misi-5">← Kembali</button><div class="right"></div></div>
+</section>
+
+<!-- HASIL -->
+<section class="page" id="p-hasil" hidden>
+  <div class="eyebrow">Laporan akhir</div>
+  <h2 tabindex="-1">Hasil dan Umpan Balik</h2>
+  <div class="res stack">
+    <div class="card">
+      <span class="tag">Skor kamu</span>
+      <div class="bignum" id="rScore">0<small> / 100</small></div>
+      <p style="margin:10px 0 0"><span class="badge" id="rCat"></span></p>
+      <div class="stat">
+        <div><b id="rOk">0</b>jawaban benar</div>
+        <div><b id="rNo">0</b>jawaban salah</div>
+      </div>
+      <span class="tag" style="margin-top:18px">Rekap soal</span>
+      <div class="dots" id="rDots"></div>
+    </div>
+    <div class="card">
+      <h3>Umpan balik</h3>
+      <p id="rFb"></p>
+      <hr class="rule" style="margin:14px 0">
+      <span class="tag">Penguasaan per materi</span>
+      <div id="rSkills"></div>
+    </div>
+  </div>
+  <div class="nav"><button class="btn alt" data-go="misi-1">Pelajari Kembali</button>
+    <div class="right"><button class="btn alt" id="retry">Ulangi Kuis</button><button class="btn" data-go="beranda">Kembali ke Beranda</button></div></div>
+</section>
+
+</main>
+
+<script>
+(function(){
+'use strict';
+var PAGES=['beranda','petunjuk','tujuan','misi-1','misi-2','misi-3','misi-4','misi-5','evaluasi','hasil'];
+var STEPS=[['misi-1','Misi 1','1'],['misi-2','Misi 2','2'],['misi-3','Misi 3','3'],['misi-4','Misi 4','4'],['misi-5','Misi 5','5'],['evaluasi','Evaluasi','✎']];
+var done={'misi-1':false,'misi-2':false,'misi-3':false,'misi-4':false,'misi-5':false};
+var quiz={started:false,i:0,answers:[],finished:false};
+var cur='beranda';
+var $=function(s,r){return (r||document).querySelector(s)};
+var MSG_OK='Hebat! Jawabanmu tepat. Kamu berhasil memahami materi ini.';
+var MSG_NO='Belum tepat. Yuk, perhatikan kembali materi dan coba pahami alasan jawabannya.';
+
+/* ---------- navigasi ---------- */
+function renderSteps(){
+  var ol=$('#steps');ol.innerHTML='';
+  STEPS.forEach(function(s){
+    var li=document.createElement('li');var b=document.createElement('button');
+    b.className='step'+(cur===s[0]?' cur':'')+(done[s[0]]?' done':'');
+    b.setAttribute('data-go',s[0]);
+    if(cur===s[0])b.setAttribute('aria-current','step');
+    b.innerHTML='<b><span>'+s[2]+'</span></b><span class="step-label">'+s[1]+(done[s[0]]?' (selesai)':'')+'</span>';
+    li.appendChild(b);ol.appendChild(li);
+  });
+  var n=Object.keys(done).filter(function(k){return done[k]}).length;
+  var mc=$('#missionCount');if(mc)mc.textContent='Misi selesai '+n+' dari 5';
+  var left=Object.keys(done).filter(function(k){return !done[k]});
+  var sb=$('#startQuiz'),lk=$('#quizLock');
+  if(sb)sb.disabled=left.length>0;
+  if(lk){
+    lk.hidden=left.length===0;
+    lk.innerHTML='<span class="ic">🔒</span><div><p><b>Kuis masih terkunci.</b> Selesaikan aktivitas pada misi berikut agar kuis terbuka:</p><div class="after">'+left.map(function(k){return '<button class="btn alt sm" type="button" data-go="'+k+'">Misi '+k.slice(5)+'</button>'}).join('')+'</div></div>';
+  }
+  var v=$('#video5');
+  if(v){
+    var open=n===5;
+    v.classList.toggle('locked',!open);
+    $('#vlink').hidden=!open;
+    $('#vstat').textContent=open?'Terbuka':'Terkunci ('+n+' dari 5 misi)';
+    $('#vtext').textContent=open?'Semua misi selesai! Dengarkan penjelasan ulang lewat video berikut sebelum mengerjakan evaluasi. Video terbuka di tab baru.':'Selesaikan Misi 1 sampai 5 untuk membuka video penjelasan ulang.';
+  }
+}
+function show(id){
+  if(PAGES.indexOf(id)<0)id='beranda';
+  if(id==='hasil'&&!quiz.finished)id='evaluasi';
+  cur=id;
+  PAGES.forEach(function(p){$('#p-'+p).hidden=(p!==id)});
+  if(id==='hasil')renderResult();
+  if(id==='evaluasi')syncQuiz();
+  renderSteps();
+  if(window.speechSynthesis)try{speechSynthesis.cancel()}catch(e){}
+  window.scrollTo(0,0);
+  var h=$('#p-'+id+' h2[tabindex]');if(h)h.focus({preventScroll:true});
+}
+function go(id){ if(location.hash==='#'+id)show(id); else location.hash=id; }
+window.addEventListener('hashchange',function(){show(location.hash.slice(1)||'beranda')});
+document.addEventListener('click',function(e){
+  var t=e.target.closest('[data-go]');if(t){go(t.getAttribute('data-go'))}
+});
+function markDone(id){ if(!done[id]){done[id]=true;renderSteps();} }
+
+/* ---------- narasi (opsional, bila perangkat mendukung) ---------- */
+(function(){
+  var ok='speechSynthesis' in window&&'SpeechSynthesisUtterance' in window;
+  document.querySelectorAll('.say').forEach(function(b){
+    if(!ok){b.hidden=true;return}
+    b.addEventListener('click',function(){
+      try{
+        if(speechSynthesis.speaking){speechSynthesis.cancel();b.textContent='🔊 Dengarkan';return}
+        var u=new SpeechSynthesisUtterance(b.closest('[data-say]').getAttribute('data-say'));
+        u.lang='id-ID';u.onend=function(){b.textContent='🔊 Dengarkan'};
+        b.textContent='⏹ Berhenti';speechSynthesis.speak(u);
+      }catch(e){b.hidden=true}
+    });
+  });
+})();
+
+/* ---------- pembuat soal pilihan ganda ---------- */
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+function buildMCQ(o){
+  var wrap=document.createElement('div');
+  var html='';
+  if(o.passage)html+='<div class="passage">'+(o.title?'<div class="ttl">'+esc(o.title)+'</div>':'')+'<p style="margin:0">'+o.passage+'</p></div>';
+  html+='<p class="q">'+o.question+'</p><div class="opts"></div><div class="fbhost" aria-live="polite"></div>';
+  wrap.innerHTML=html;
+  var box=$('.opts',wrap),host=$('.fbhost',wrap);
+  var L=['A','B','C','D'];
+  o.options.forEach(function(t,i){
+    var b=document.createElement('button');b.type='button';b.className='opt'+(o.sentences?' sent':'');
+    b.innerHTML=(o.sentences?'<span class="num">'+(i+1)+'</span>':'<span class="let">'+L[i]+'</span>')+'<span>'+esc(t)+'</span>';
+    b.addEventListener('click',function(){
+      box.classList.add('locked');
+      var ok=i===o.correct;
+      b.classList.add(ok?'ok':'no');
+      if(!ok)box.children[o.correct].classList.add('ok');
+      host.innerHTML='<div class="fb '+(ok?'ok':'no')+'"><span class="ic">'+(ok?'✓':'✕')+'</span><div><p><b>'+(ok?MSG_OK:MSG_NO)+'</b></p><p>'+o.explain+'</p></div></div>';
+      if(o.onAnswer)o.onAnswer(ok,i,wrap);
+    });
+    box.appendChild(b);
+  });
+  return wrap;
+}
+function rounds(host,list,scoreEl,missionId,label){
+  var i=0,right=0;
+  function step(){
+    host.innerHTML='';
+    var d=list[i];
+    var head=document.createElement('p');head.className='tag';head.textContent=label+' '+(i+1)+' dari '+list.length;
+    host.appendChild(head);
+    var m=buildMCQ(Object.assign({},d,{onAnswer:function(ok,_,w){
+      if(ok)right++;
+      scoreEl.textContent='Benar '+right+' dari '+list.length;
+      var a=document.createElement('div');a.className='after';
+      var b=document.createElement('button');b.className='btn';b.type='button';
+      if(i<list.length-1){b.textContent=label+' berikutnya →';b.onclick=function(){i++;step()}}
+      else{b.textContent='Lihat ringkasan';b.onclick=finish;markDone(missionId)}
+      a.appendChild(b);w.appendChild(a);b.focus({preventScroll:false});
+    }}));
+    host.appendChild(m);
+  }
+  function finish(){
+    host.innerHTML='<div class="summary"><div class="big">'+right+' / '+list.length+'</div><p>'+(right===list.length?'Sempurna! Kamu sudah mahir pada misi ini.':'Kamu menjawab '+right+' dari '+list.length+' dengan benar. Baca ulang materi lalu coba lagi untuk memperkuat pemahamanmu.')+'</p><button class="btn alt" type="button">Main lagi</button></div>';
+    $('button',host).onclick=function(){i=0;right=0;scoreEl.textContent='Benar 0 dari '+list.length;step()};
+  }
+  step();
+}
+
+/* ---------- Misi 1 ---------- */
+(function(){
+  var host=$('#act-1-body');
+  function mk(){
+    host.innerHTML='';
+    host.appendChild(buildMCQ({
+      title:'Bank Sampah Sekolah',
+      passage:'Bank sampah di sekolah kami mengumpulkan botol plastik, kertas, dan kaleng dari rumah siswa. Setiap Jumat, petugas menimbang sampah tersebut lalu mencatat hasilnya. Sampah yang terkumpul dijual kepada pengepul dan uangnya dimasukkan ke tabungan kelas. Dengan cara ini, siswa belajar memilah sampah sekaligus menabung.',
+      question:'Apa topik teks tersebut?',
+      options:['Cara menimbang sampah setiap hari Jumat','Bank sampah di sekolah','Tabungan kelas dari penjualan kaleng','Manfaat botol plastik bagi siswa'],
+      correct:1,
+      explain:'Seluruh isi teks membahas bank sampah di sekolah: apa yang dikumpulkan, cara kerjanya, dan hasilnya. Pilihan lain hanya menyebut sebagian kecil isi teks.',
+      onAnswer:function(ok,_,w){
+        markDone('misi-1');
+        if(!ok){var a=document.createElement('div');a.className='after';a.innerHTML='<button class="btn alt" type="button">Coba lagi</button>';$('button',a).onclick=mk;w.appendChild(a)}
+      }
+    }));
+  }
+  mk();
+})();
+
+/* ---------- Misi 2 ---------- */
+rounds($('#act-2-body'),[
+ {title:'Metamorfosis Kupu-Kupu',passage:'Kupu-kupu mengalami metamorfosis sempurna dalam empat tahap. Tahap pertama adalah telur yang diletakkan induk pada permukaan daun. Telur menetas menjadi ulat yang makan daun dengan lahap. Ulat kemudian berubah menjadi kepompong, lalu keluar sebagai kupu-kupu dewasa.',question:'Apa gagasan utama paragraf tersebut?',
+  options:['Ulat makan banyak daun.','Kupu-kupu mengalami metamorfosis sempurna dalam empat tahap.','Induk kupu-kupu meletakkan telur di daun.','Kepompong berubah menjadi kupu-kupu dewasa.'],correct:1,
+  explain:'Kalimat pertama memuat inti paragraf. Kalimat lainnya menguraikan tahap-tahap tersebut, jadi hanya berfungsi sebagai gagasan penjelas.'},
+ {title:'Lapangan di Pagi Hari',passage:'Di lapangan sekolah pada pagi hari, burung berkicau di pepohonan dan embun masih menempel di ujung rumput. Udara terasa sejuk sehingga siswa nyaman berolahraga. Beberapa siswa berlari kecil di tepi lapangan, sebagian lain melakukan pemanasan. Suasana lapangan sekolah di pagi hari sangat nyaman untuk beraktivitas.',question:'Apa gagasan utama paragraf tersebut?',
+  options:['Burung berkicau di pepohonan.','Siswa berlari kecil di tepi lapangan.','Embun menempel di ujung rumput.','Lapangan sekolah di pagi hari nyaman untuk beraktivitas.'],correct:3,
+  explain:'Semua rincian (kicau burung, embun, udara sejuk, siswa berolahraga) mendukung satu inti, yaitu lapangan nyaman untuk beraktivitas. Inti itu dinyatakan pada kalimat terakhir.'},
+ {title:'Kantin Sekolah',passage:'Kantin sekolah menyediakan beragam makanan sehat. Tersedia buah potong, sayur segar, dan susu kemasan. Penjual juga tidak memakai pewarna buatan pada minuman. Selain itu, harga makanan terjangkau oleh siswa.',question:'Apa gagasan utama paragraf tersebut?',
+  options:['Susu kemasan dijual di kantin.','Penjual tidak memakai pewarna buatan.','Kantin sekolah menyediakan makanan yang sehat dan terjangkau.','Siswa membeli buah potong setiap hari.'],correct:2,
+  explain:'Buah, sayur, susu, dan minuman tanpa pewarna adalah rincian. Gabungan semuanya menunjukkan inti: makanan di kantin sehat dan terjangkau.'}
+],$('#score-2'),'misi-2','Paragraf');
+
+/* ---------- Misi 3: Pasangkan Gagasan ---------- */
+(function(){
+  var host=$('#act-3-body'),score=$('#score-3');
+  var A='Sepeda motor bermanfaat sebagai alat transportasi pribadi.';
+  var B='Perpustakaan sekolah menyediakan banyak fasilitas bagi siswa.';
+  var chips0=[
+    {t:'Digunakan untuk pergi bekerja.',g:'a'},
+    {t:'Ada ruang baca yang tenang dan sejuk.',g:'b'},
+    {t:'Termasuk alat transportasi yang hemat.',g:'a'},
+    {t:'Tersedia ribuan buku fiksi dan nonfiksi.',g:'b'},
+    {t:'Memudahkan pengendara mengakses gang sempit dan jalan macet.',g:'a'},
+    {t:'Siswa dapat memakai komputer untuk mencari referensi.',g:'b'}
+  ];
+  function mk(){
+    var sel=null,placed=0;score.textContent='Terpasang 0 dari 6';
+    host.innerHTML='<div class="pairs">'+
+      '<div class="pbox"><button class="pbtn" data-g="a" type="button"><small>Gagasan utama A</small>'+A+'</button><ul id="slot-a"></ul></div>'+
+      '<div class="pbox"><button class="pbtn" data-g="b" type="button"><small>Gagasan utama B</small>'+B+'</button><ul id="slot-b"></ul></div></div>'+
+      '<div class="chips" id="chips"></div><div id="fb3" aria-live="polite"></div>';
+    var chips=$('#chips',host),fb=$('#fb3',host);
+    function say(ok,t){fb.innerHTML='<div class="fb '+(ok?'ok':'no')+'"><span class="ic">'+(ok?'✓':'✕')+'</span><div><p>'+t+'</p></div></div>'}
+    chips0.forEach(function(c){
+      var b=document.createElement('button');b.type='button';b.className='chip';b.textContent=c.t;b.setAttribute('aria-pressed','false');
+      b.addEventListener('click',function(){
+        if(sel)sel.el.setAttribute('aria-pressed','false');
+        sel={c:c,el:b};b.setAttribute('aria-pressed','true');
+        say(true,'Sekarang klik gagasan utama yang didukung oleh: “'+c.t+'”');
+      });
+      chips.appendChild(b);
+    });
+    host.querySelectorAll('.pbtn').forEach(function(pb){
+      pb.addEventListener('click',function(){
+        if(!sel){say(false,'Pilih dulu satu gagasan penjelas di bagian bawah.');return}
+        var g=pb.getAttribute('data-g');
+        if(sel.c.g===g){
+          var li=document.createElement('li');li.textContent=sel.c.t;$('#slot-'+g,host).appendChild(li);
+          sel.el.remove();sel=null;placed++;score.textContent='Terpasang '+placed+' dari 6';
+          if(placed===6){markDone('misi-3');fb.innerHTML='<div class="fb ok"><span class="ic">✓</span><div><p><b>Hebat! Semua gagasan penjelas terpasang dengan tepat.</b></p><p>Setiap gagasan penjelas merinci atau mendukung satu gagasan utama. Gagasan yang tidak membahas hal yang sama tidak cocok dipasangkan.</p><div class="after"><button class="btn alt sm" type="button" id="again3">Main lagi</button></div></div></div>';$('#again3',host).onclick=mk}
+          else say(true,'Tepat! Gagasan itu mendukung gagasan utama yang kamu pilih.');
+        }else{
+          pb.parentNode.classList.remove('shake');void pb.parentNode.offsetWidth;pb.parentNode.classList.add('shake');
+          say(false,'Belum tepat. Gagasan itu tidak menguraikan gagasan utama tersebut. Coba pasangkan ke gagasan utama yang satunya.');
+        }
+      });
+    });
+  }
+  mk();
+})();
+
+/* ---------- Misi 4: Detektif Kalimat Utama ---------- */
+rounds($('#act-4-body'),[
+ {sentences:true,question:'Paragraf tentang sungai. Klik kalimat yang menurutmu adalah kalimat utama.',
+  options:['Sungai di dekat desa kami mulai tercemar sampah rumah tangga.','Air sungai berwarna keruh dan berbau tidak sedap.','Banyak plastik mengambang di tepi sungai.','Ikan-ikan kecil pun semakin sulit ditemukan.'],correct:0,
+  explain:'Kalimat 1 bersifat umum dan memuat inti paragraf. Kalimat 2 sampai 4 adalah bukti pencemaran: air keruh, plastik, dan ikan yang berkurang. Kalimat utama berada di awal paragraf.'},
+ {sentences:true,question:'Paragraf tentang petugas kebersihan. Klik kalimat yang menurutmu adalah kalimat utama.',
+  options:['Setiap pagi, petugas mengecek lampu di sepanjang koridor.','Mereka juga memastikan toilet dan ruang kelas dalam keadaan bersih.','Halaman disapu hingga tidak ada sampah daun.','Dengan demikian, petugas kebersihan sekolah bekerja keras menjaga kenyamanan lingkungan belajar.'],correct:3,
+  explain:'Kalimat 1 sampai 3 menyebutkan pekerjaan yang spesifik. Kalimat 4 menyimpulkan semuanya dengan pernyataan umum. Kalimat utama berada di akhir paragraf, ditandai kata “dengan demikian”.'}
+],$('#score-4'),'misi-4','Paragraf');
+
+/* ---------- Misi 5: penjelajah unsur ---------- */
+(function(){
+  var seg=$('#seg5'),sm=$('#sample5'),ex=$('#expl5'),score=$('#score-5');
+  var S=['Sepeda motor bermanfaat sebagai alat transportasi pribadi.','Sepeda motor digunakan untuk pergi bekerja.','Sepeda motor termasuk alat transportasi yang hemat.','Sepeda motor memudahkan pengendara mengakses gang sempit dan jalan macet.'];
+  var defs=[
+   {k:'topik',t:'Topik',x:'Topik adalah pokok pembicaraan seluruh teks, dan mudah dikenali dari judul: <b>Sepeda motor di Indonesia</b>.'},
+   {k:'gu',t:'Gagasan utama',x:'Gagasan utama adalah inti paragraf: <b>manfaat sepeda motor sebagai alat transportasi pribadi</b>. Gagasan ini lebih khusus daripada topik.'},
+   {k:'gp',t:'Gagasan penjelas',x:'Tiga kalimat yang disorot merinci gagasan utama: untuk pergi bekerja, hemat, dan mudah melewati gang sempit serta jalan macet.'},
+   {k:'ku',t:'Kalimat utama',x:'Kalimat utama adalah kalimat yang memuat gagasan utama. Di paragraf ini letaknya di awal, dan kalimat sesudahnya menjelaskannya.'}
+  ];
+  var seen={};
+  function draw(k){
+    sm.innerHTML='<span class="ttl'+(k==='topik'?' hl-topik':'')+'">Sepeda Motor di Indonesia</span><p style="margin:0">'+
+      S.map(function(s,i){
+        var c='';
+        if(k==='ku'&&i===0)c=' hl-utama';
+        if(k==='gu'&&i===0)c=' hl-gagasan';
+        if(k==='gp'&&i>0)c=' hl-penjelas';
+        return '<span class="snt'+c+'">'+s+'</span>';
+      }).join(' ')+'</p>';
+  }
+  draw('');
+  defs.forEach(function(d){
+    var b=document.createElement('button');b.type='button';b.textContent=d.t;b.setAttribute('aria-pressed','false');
+    b.addEventListener('click',function(){
+      seg.querySelectorAll('button').forEach(function(x){x.setAttribute('aria-pressed','false')});
+      b.setAttribute('aria-pressed','true');b.classList.add('seen');seen[d.k]=1;
+      draw(d.k);ex.lastElementChild.innerHTML=d.x;
+      var n=Object.keys(seen).length;score.textContent='Dilihat '+n+' dari 4';
+      if(n===4)markDone('misi-5');
+    });
+    seg.appendChild(b);
+  });
+})();
+
+/* ---------- Evaluasi ---------- */
+var Q=[
+ {c:'Topik',m:'misi-1',title:'Kelelawar Buah',p:'Kelelawar buah adalah hewan pemakan buah yang aktif pada malam hari. Siang hari, kelelawar bergantung terbalik di dahan pohon besar. Menjelang senja, kelompok kelelawar terbang mencari buah seperti jambu, pisang, dan mangga. Biji buah yang dijatuhkan kelelawar membantu pohon baru tumbuh di hutan.',q:'Apa topik teks tersebut?',o:['Pohon jambu di hutan kota','Kelelawar buah','Biji buah yang jatuh ke tanah','Cara terbang pada waktu senja'],a:1,e:'Setiap kalimat membahas kelelawar buah: kebiasaan, tempat tinggal, makanan, dan perannya. Pilihan lain hanya sebagian kecil isi teks.'},
+ {c:'Topik',m:'misi-1',title:'Pasar Terapung',p:'Pasar terapung di Banjarmasin berlangsung sejak subuh. Para pedagang menjajakan sayur, buah, dan kue dari atas jukung. Pembeli menawar barang dari perahu lain sehingga transaksi terjadi di atas air. Pasar ini menjadi daya tarik wisata sekaligus sumber penghidupan warga.',q:'Apa topik teks tersebut?',o:['Jukung sebagai alat transportasi','Cara menawar barang dagangan','Wisata kuliner di Kalimantan','Pasar terapung di Banjarmasin'],a:3,e:'Judul dan seluruh isi teks membahas pasar terapung di Banjarmasin. Jukung dan tawar-menawar hanya bagian dari pembahasan itu.'},
+ {c:'Gagasan utama',m:'misi-2',title:'Taman Sekolah',p:'Hasil pengamatan kami di taman sekolah menunjukkan bahwa tanaman hias sangat beragam. Terdapat bunga kembang sepatu berwarna merah dan putih. Selain itu, kami menemukan anggrek yang menempel di batang pohon mangga. Beberapa pot juga berisi lidah buaya dan sirih gading.',q:'Gagasan utama paragraf tersebut adalah...',o:['Taman sekolah memiliki beragam tanaman hias.','Kembang sepatu berwarna merah dan putih.','Anggrek menempel pada batang pohon mangga.','Lidah buaya ditanam di dalam pot.'],a:0,e:'Kembang sepatu, anggrek, lidah buaya, dan sirih gading adalah contoh dari keberagaman tanaman. Keberagaman itulah gagasan utamanya.'},
+ {c:'Gagasan utama',m:'misi-2',title:'Perilaku Semut',p:'Pengamatan terhadap kebiasaan semut menunjukkan bahwa mereka bekerja secara berkelompok. Semut pekerja mencari makanan dan membawanya ke sarang. Semut prajurit menjaga sarang dari gangguan. Ratu semut bertugas bertelur untuk menambah anggota koloni.',q:'Gagasan utama paragraf tersebut adalah...',o:['Ratu semut bertugas bertelur.','Semut pekerja membawa makanan ke sarang.','Semut bekerja berkelompok dengan pembagian tugas.','Semut prajurit menjaga sarang dari gangguan.'],a:2,e:'Tugas pekerja, prajurit, dan ratu merupakan rincian. Ketiganya menunjukkan inti paragraf: semut bekerja berkelompok dengan pembagian tugas.'},
+ {c:'Gagasan utama',m:'misi-2',title:'Selokan di Depan Sekolah',p:'Air hujan mengalir deras melewati selokan di depan sekolah. Sampah plastik tersangkut di saluran sehingga air meluap ke jalan. Sebagian siswa terpaksa berjalan melewati genangan. Banjir kecil di depan sekolah disebabkan oleh sampah yang menyumbat selokan.',q:'Gagasan utama paragraf tersebut adalah...',o:['Air hujan mengalir deras melewati selokan.','Banjir kecil di depan sekolah disebabkan sampah yang menyumbat selokan.','Siswa berjalan melewati genangan air.','Plastik tersangkut di saluran air.'],a:1,e:'Hujan deras, plastik tersangkut, dan genangan adalah bagian dari rangkaian peristiwa. Penyebab banjir kecil itulah yang menjadi inti paragraf.'},
+ {c:'Gagasan penjelas',m:'misi-3',title:'Berkebun Vertikal',p:'Berkebun vertikal cocok untuk lahan sempit. Tanaman ditanam pada rak bertingkat sehingga hemat tempat. Siswa dapat menyiram semua tanaman tanpa banyak berpindah. Hasil panen berupa sawi dan kangkung dapat dimasak di kantin.',q:'Pernyataan berikut yang merupakan gagasan penjelas paragraf tersebut adalah...',o:['Berkebun vertikal cocok untuk lahan sempit.','Berkebun adalah kegiatan yang menyenangkan.','Tanaman ditanam pada rak bertingkat sehingga hemat tempat.','Setiap sekolah wajib memiliki kebun.'],a:2,e:'Pilihan A adalah gagasan utamanya. Pilihan B dan D tidak ada dalam paragraf. Pilihan C merinci mengapa berkebun vertikal cocok untuk lahan sempit.'},
+ {c:'Gagasan penjelas',m:'misi-3',title:'Manfaat Renang',p:'Renang bermanfaat bagi kesehatan tubuh. Gerakan renang melibatkan otot lengan, kaki, dan punggung sekaligus. Air membuat sendi tidak menanggung beban berat. Napas pun terlatih karena perenang harus mengatur pernapasan.',q:'Kalimat berikut yang merupakan gagasan penjelas paragraf tersebut adalah...',o:['Gerakan renang melibatkan otot lengan, kaki, dan punggung sekaligus.','Renang adalah olahraga yang bermanfaat.','Kolam renang tersedia di banyak kota.','Semua siswa harus bisa berenang.'],a:0,e:'Pilihan A memberi rincian yang mendukung gagasan utama tentang manfaat renang. Pilihan B hanya mengulang gagasan utama. Pilihan C dan D tidak mendukung inti paragraf.'},
+ {c:'Kalimat utama',m:'misi-4',title:'Kebun Binatang',p:'(1) Kebun binatang menjadi tempat belajar yang menarik bagi pelajar. (2) Siswa dapat mengamati langsung perilaku satwa. (3) Papan informasi di setiap kandang menjelaskan jenis dan habitat hewan. (4) Pemandu juga bersedia menjawab pertanyaan pengunjung.',q:'Kalimat utama paragraf tersebut terdapat pada kalimat nomor...',o:['(2)','(3)','(4)','(1)'],a:3,e:'Kalimat (1) memuat gagasan yang paling umum. Kalimat (2) sampai (4) menjelaskan cara kebun binatang menjadi tempat belajar. Kalimat utamanya berada di awal paragraf.'},
+ {c:'Kalimat utama',m:'misi-4',title:'Piket Kelas',p:'(1) Pagi hari, siswa piket menyapu lantai kelas. (2) Papan tulis dihapus dan meja dirapikan. (3) Sampah di kolong meja dibuang ke tempat sampah. (4) Jadi, kegiatan piket membuat kelas selalu bersih dan nyaman.',q:'Kalimat utama paragraf tersebut terdapat pada kalimat nomor...',o:['(1)','(4)','(2)','(3)'],a:1,e:'Kalimat (1) sampai (3) berisi kegiatan yang spesifik. Kalimat (4) menyimpulkan semuanya dan ditandai kata “jadi”. Kalimat utamanya berada di akhir paragraf.'},
+ {c:'Kalimat utama',m:'misi-4',title:'Angklung',p:'(1) Angklung adalah alat musik tradisional yang terbuat dari bambu. (2) Bunyinya dihasilkan dengan cara menggoyangkan rangka bambu. (3) Setiap angklung hanya menghasilkan satu nada. (4) Karena itu, pemain angklung harus bermain bersama-sama.',q:'Alasan paling tepat kalimat (1) menjadi kalimat utama adalah...',o:['Kalimat (1) terletak paling awal.','Kalimat (1) paling pendek di antara kalimat lain.','Kalimat (1) memuat inti paragraf yang dirinci oleh kalimat lainnya.','Kalimat (1) menyebut kata “bambu”.'],a:2,e:'Letak di awal saja tidak cukup untuk menentukan kalimat utama. Kalimat (1) menjadi kalimat utama karena memuat inti yang lebih umum, lalu kalimat (2) sampai (4) menjelaskannya.'}
+];
+function resetQuiz(){quiz={started:false,i:0,answers:[],finished:false}}
+function syncQuiz(){
+  $('#quizIntro').hidden=quiz.started;
+  $('#quizBody').hidden=!quiz.started;
+  $('#evalNav .right').innerHTML='';
+  if(quiz.started&&!quiz.finished)drawQ();
+}
+function score(){return quiz.answers.filter(function(a,i){return a===Q[i].a}).length*10}
+function drawQ(){
+  var i=quiz.i,d=Q[i],body=$('#quizBody');
+  body.innerHTML='<div class="qmeta"><span>Soal '+(i+1)+' dari 10</span><span class="badge">Skor sementara '+score()+'</span></div>'+
+    '<div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="10" aria-valuenow="'+i+'"><i style="width:'+(i*10)+'%"></i></div><div class="act" style="margin-top:0" id="qhost"></div>';
+  $('#qhost').appendChild(buildMCQ({title:d.title,passage:esc(d.p),question:d.q,options:d.o,correct:d.a,explain:d.e,
+    onAnswer:function(ok,pick,w){
+      quiz.answers[i]=pick;
+      $('.qmeta .badge',body).textContent='Skor sementara '+score();
+      var a=document.createElement('div');a.className='after';
+      var b=document.createElement('button');b.className='btn';b.type='button';
+      b.textContent=i<9?'Soal berikutnya →':'Lihat hasil →';
+      b.onclick=function(){ if(i<9){quiz.i++;drawQ();window.scrollTo(0,0)} else {quiz.finished=true;go('hasil')} };
+      a.appendChild(b);w.appendChild(a);b.focus();
+    }}));
+}
+function startQuiz(){
+  if(Object.keys(done).some(function(k){return !done[k]}))return;
+  resetQuiz();quiz.started=true;syncQuiz();window.scrollTo(0,0)}
+$('#startQuiz').addEventListener('click',startQuiz);
+$('#retry').addEventListener('click',function(){startQuiz();go('evaluasi')});
+
+/* ---------- Hasil ---------- */
+function renderResult(){
+  var s=score(),ok=s/10,no=10-ok;
+  $('#rScore').innerHTML=s+'<small> / 100</small>';
+  $('#rOk').textContent=ok;$('#rNo').textContent=no;
+  var cat,fb;
+  if(s>=90){cat='Sangat Baik';fb='Luar biasa! Kamu sudah memahami topik, gagasan utama, gagasan penjelas, dan kalimat utama dengan sangat baik. Untuk menantang dirimu, coba baca teks observasi lain dan tentukan keempat unsur itu sendiri.'}
+  else if(s>=80){cat='Baik';fb='Pemahamanmu sudah baik. Periksa kembali soal yang masih keliru pada rekap di sebelah kiri, lalu baca ulang misi yang berkaitan agar pemahamanmu semakin mantap.'}
+  else if(s>=70){cat='Cukup';fb='Kamu sudah menguasai sebagian besar materi. Lihat penguasaan per materi di bawah ini, ulangi misi yang masih terasa sulit, lalu coba kuis sekali lagi.'}
+  else{cat='Perlu Belajar Kembali';fb='Tidak apa-apa, memahami struktur teks memang butuh latihan. Baca ulang materi pada setiap misi, perhatikan contoh dan alasan jawabannya, lalu coba kuis lagi. Kamu pasti bisa meningkat.'}
+  $('#rCat').textContent=cat;$('#rFb').textContent=fb;
+  $('#rDots').innerHTML=Q.map(function(d,i){var y=quiz.answers[i]===d.a;return '<span class="'+(y?'y':'n')+'" title="Soal '+(i+1)+(y?' benar':' salah')+'">'+(i+1)+(y?'✓':'✕')+'</span>'}).join('');
+  var cats={};Q.forEach(function(d,i){var c=cats[d.c]||(cats[d.c]={n:0,r:0,m:d.m});c.n++;if(quiz.answers[i]===d.a)c.r++});
+  $('#rSkills').innerHTML=Object.keys(cats).map(function(k){var c=cats[k];
+    return '<div class="skill"><span><b>'+k+'</b>: '+c.r+' dari '+c.n+' benar</span>'+(c.r<c.n?'<button class="btn alt sm" data-go="'+c.m+'" type="button">Pelajari lagi</button>':'<span class="badge">Tuntas</span>')+'</div>'}).join('');
+}
+
+renderSteps();
+show(location.hash.slice(1)||'beranda');
+})();
+</script>
+</body>
+</html>
